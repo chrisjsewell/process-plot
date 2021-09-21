@@ -17,6 +17,7 @@ def test_profile_process():
             max_iterations=2,
             output_separator=",",
             output_stream=output_stream,
+            output_files_num=True,
         )
     output_lines = output_stream.getvalue().rstrip().splitlines()
     assert len(output_lines) == 3
