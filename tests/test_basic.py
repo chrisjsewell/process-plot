@@ -51,7 +51,7 @@ def test_cli_exec(tmp_path):
         ],
     )
     print(result.output)
-    print(result.exc_info)
+    print(result.stderr)
     assert result.exit_code == 0
     assert os.path.exists(os.path.join(str(tmp_path), "output.csv"))
     assert os.path.exists(os.path.join(str(tmp_path), "output.png"))
