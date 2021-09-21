@@ -76,6 +76,7 @@ def profile_process(  # noqa: C901
         except psutil.NoSuchProcess:
             break
         if output_files_num:
+            data["num_files"] = "-"
             try:
                 if POSIX:
                     data["num_files"] = proc.num_fds()
@@ -83,7 +84,7 @@ def profile_process(  # noqa: C901
                     data["num_files"] = proc.num_handles()
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 # this was happening on linux with num_fds call
-                data["num_files"] = "-"
+                pass
 
         if data is None or data["cpu_percent"] is None:
             break
