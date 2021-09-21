@@ -126,19 +126,21 @@ def plot_result(
     columns: Sequence[str] = ("memory_rss", "cpu_percent"),
     title: str = "",
     grid: bool = True,
+    width_cm: Optional[float] = None,
+    height_cm: Optional[float] = None,
 ) -> None:
     """Plot output stream CSV."""
     import pandas as pd
 
-    convert = {
-        "cpu_time_user": "cpu_time_user_secs",
-        "cpu_time_sys": "cpu_time_sys_secs",
+    _convert = {
+        "cpu_time_user_secs": "cpu_time_user",
+        "cpu_time_sys_secs": "cpu_time_sys",
     }
-    columns = [convert.get(col, col) for col in columns]
 
     df = pd.read_csv(inpath).set_index("elapsed_secs")
     df["memory_rss"] = df["memory_rss_bytes"] / (1024 * 1024)
     df["memory_vms"] = df["memory_vms_bytes"] / (1024 * 1024)
+    df.rename(_convert, axis=1, inplace=True)
     axes = df.plot(y=list(columns), sharex=True, subplots=True, legend=False, grid=grid)
     axes[-1].set_xlabel("Elapsed Time (s)")
     for ax, column in zip(axes, columns):
@@ -146,5 +148,10 @@ def plot_result(
     fig = axes[0].get_figure()
     if title:
         fig.suptitle(title)
+    if width_cm:
+        fig.set_figwidth(width_cm * 0.393701)
+    if height_cm:
+        fig.set_figheight(height_cm * 0.393701)
+    fig.align_ylabels()
     fig.tight_layout()
     fig.savefig(outpath)

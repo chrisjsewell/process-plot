@@ -53,6 +53,8 @@ Options:
                                   memory_rss,cpu_percent]
   --title TEXT                    Plot title (defaults to command)
   --grid / --no-grid              Add grid to plots  [default: grid]
+  -sw, --size-width FLOAT         Width of plot in cm
+  -sh, --size-height FLOAT        Height of plot in cm
   -f, --format [png|pdf|svg]      Plot file format
   -v, --verbose                   Increase verbosity  [x>=0]
   -q, --quiet                     Quiet mode

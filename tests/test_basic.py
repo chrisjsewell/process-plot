@@ -4,7 +4,7 @@ from io import StringIO
 import pytest
 from click.testing import CliRunner
 
-from process_plot.api import COLUMNS_DESCRIPT, profile_process
+from process_plot.api import COLUMNS_DESCRIPT, PLOT_YLABELS, profile_process
 from process_plot.cli import cmd_exec
 
 
@@ -35,7 +35,20 @@ def test_cli_exec(tmp_path):
     """Test the command line interface"""
     runner = CliRunner()
     result = runner.invoke(
-        cmd_exec, ["--outfolder", str(tmp_path), "--basename", "output", "echo hi"]
+        cmd_exec,
+        [
+            "--outfolder",
+            str(tmp_path),
+            "--basename",
+            "output",
+            "--plot-cols",
+            ",".join(dict(PLOT_YLABELS)),
+            "-sw",
+            "10",
+            "-sh",
+            "50",
+            "echo hi",
+        ],
     )
     assert result.exit_code == 0
     assert os.path.exists(os.path.join(str(tmp_path), "output.csv"))
