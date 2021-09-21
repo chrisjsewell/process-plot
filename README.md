@@ -32,6 +32,27 @@ You will then find the output files in `/user/pplot_out`, with a plot for the pr
 
 ![example plot](example.png)
 
+Additional options are available:
+
+```console
+$ pplot exec --help
+Usage: pplot exec [OPTIONS] COMMAND
+
+  Execute a command and profile it.
+
+Options:
+  -i, --interval FLOAT            Interval in seconds
+  -c, --command-output [hide|screen|file]
+                                  Mode for stdout/stderr of command  [default:
+                                  file]
+  -p, --basepath TEXT             Basepath for output files
+  -n, --basename TEXT             Basename for output files (defaults to
+                                  datetime)
+  -v, --verbose                   Increase verbosity  [x>=0]
+  -q, --quiet                     Quiet mode
+  --help                          Show this message and exit.
+```
+
 ## Acknowledgements
 
 Initially adapted from: <https://github.com/jeetsukumaran/Syrupy>
