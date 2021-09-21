@@ -181,7 +181,7 @@ def cmd_exec(
                     )
                 except TimeoutError:
                     echo_info("Process reached timeout before terminating", quiet=quiet)
-                    proc.kill()
+                proc.kill()
                 end_time = datetime.now()
 
     hours, mins, secs = str(end_time - start_time).split(":")

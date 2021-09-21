@@ -56,7 +56,7 @@ def profile_process(
 
         elapsed_time = time.time() - proc.create_time()
         try:
-            if not proc.is_running():
+            if not proc.is_running() or proc.status() == "zombie":
                 raise psutil.NoSuchProcess(proc.pid)
             data = proc.as_dict(
                 attrs=["cpu_times", "cpu_percent", "num_threads", "memory_info"]
