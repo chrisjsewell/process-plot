@@ -4,10 +4,9 @@
 [![codecov.io][cov-badge]][cov-link]
 [![PyPI version][pypi-badge]][pypi-link]
 
-Create plots of memory and CPU usage for a process.
+Create plots of resource usage for a process (memory, CPU, etc).
 
-This is a wrapper around the [ps](https://man7.org/linux/man-pages/man1/ps.1.html) command,
-which polls it at a set interval.
+Process statistics are polled at a set interval, in a cross-platform manner (i.e. supports Linux, OSX and Windows).
 
 ## Usage
 
