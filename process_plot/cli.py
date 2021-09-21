@@ -199,7 +199,7 @@ def cmd_exec(
     )
     plot_path = output_path.parent / f"{basename}.{format}"
     echo_info(f"Plotting results to: {plot_path}", quiet=quiet)
-    plot_result(
+    plotted = plot_result(
         output_path,
         plot_path,
         columns=columns,
@@ -208,6 +208,8 @@ def cmd_exec(
         width_cm=size_width,
         height_cm=size_height,
     )
+    if not plotted:
+        echo_info("No data to plot", quiet=quiet)
     echo_success(quiet=quiet)
 
 

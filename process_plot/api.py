@@ -131,8 +131,11 @@ def plot_result(
     grid: bool = True,
     width_cm: Optional[float] = None,
     height_cm: Optional[float] = None,
-) -> None:
-    """Plot output stream CSV."""
+) -> bool:
+    """Plot output stream CSV.
+
+    :returns: True if successful, False if no data to plot
+    """
     import pandas as pd
 
     _convert = {
@@ -141,6 +144,8 @@ def plot_result(
     }
 
     df = pd.read_csv(inpath).set_index("elapsed_secs")
+    if not df.shape[0]:
+        return False
     df["memory_rss"] = df["memory_rss_bytes"] / (1024 * 1024)
     df["memory_vms"] = df["memory_vms_bytes"] / (1024 * 1024)
     df.rename(_convert, axis=1, inplace=True)
@@ -158,3 +163,4 @@ def plot_result(
     fig.align_ylabels()
     fig.tight_layout()
     fig.savefig(outpath)
+    return True
