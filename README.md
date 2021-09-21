@@ -48,7 +48,7 @@ Options:
   -o, --outfolder DIRECTORY       Folder path for output files
   -n, --basename TEXT             Basename for output files (defaults to
                                   datetime)
-  -p, --plot-cols [memory_rss|memory_vms|cpu_percent|cpu_time_user|cpu_time_sys|threads_num]
+  -p, --plot-cols [memory_rss|memory_vms|cpu_percent|cpu_time_user|cpu_time_sys|threads_num|files_num]
                                   Columns to plot (comma-delimited)  [default:
                                   memory_rss,cpu_percent]
   --title TEXT                    Plot title (defaults to command)
