@@ -120,9 +120,12 @@ def main(
 @click.option(
     "-n", "--basename", help="Basename for output files (defaults to datetime)"
 )
+@click.option("-t", "--title", help="Plot title")
 @click.option("-v", "--verbose", count=True, help="Increase verbosity")
 @click.option("-q", "--quiet", is_flag=True, help="Quiet mode")
-def cmd_exec(command, basepath, basename, interval, command_output, verbose, quiet):
+def cmd_exec(
+    command, basepath, basename, interval, command_output, title, verbose, quiet
+):
     """Execute a command and profile it."""
 
     basepath = Path(basepath)
@@ -182,11 +185,11 @@ def cmd_exec(command, basepath, basename, interval, command_output, verbose, qui
         quiet=quiet,
     )
     echo_info("Plotting results", quiet=quiet)
-    plot_result(output_path, basename)
+    plot_result(output_path, basename, title)
     echo_success(quiet=quiet)
 
 
-def plot_result(path: Path, basename: str, grid: bool = True):
+def plot_result(path: Path, basename: str, title: str = "", grid: bool = True):
     import pandas as pd
 
     df = pd.read_csv(path).set_index("ELAPSED")
@@ -197,7 +200,11 @@ def plot_result(path: Path, basename: str, grid: bool = True):
     ax1.set_ylabel("RSS Memory (MB)")
     ax2.set_ylabel("CPU Usage (%)")
     ax2.set_xlabel("Elapsed Time (s)")
-    ax1.get_figure().savefig(path.parent / f"{basename}.png")
+    fig = ax1.get_figure()
+    if title:
+        fig.suptitle(title)
+    fig.tight_layout()
+    fig.savefig(path.parent / f"{basename}.png")
 
 
 if __name__ == "__main__":
