@@ -196,6 +196,7 @@ def plot_result(path: Path, basename: str, grid: bool = True):
     )
     ax1.set_ylabel("RSS Memory (MB)")
     ax2.set_ylabel("CPU Usage (%)")
+    ax2.set_xlabel("Elapsed Time (s)")
     ax1.get_figure().savefig(path.parent / f"{basename}.png")
 
 
