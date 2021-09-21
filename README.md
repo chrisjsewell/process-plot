@@ -4,10 +4,9 @@
 [![codecov.io][cov-badge]][cov-link]
 [![PyPI version][pypi-badge]][pypi-link]
 
-Create plots of memory and CPU usage for a process.
+Create plots of resource usage for a process (memory, CPU, etc).
 
-This is a wrapper around the [ps](https://man7.org/linux/man-pages/man1/ps.1.html) command,
-which polls it at a set interval.
+Process statistics are polled at a set interval, in a cross-platform manner (i.e. supports Linux, OSX and Windows).
 
 ## Usage
 
@@ -20,11 +19,11 @@ $ pipx install process-plot
 then run:
 
 ```console
-$ pplot exec -i 0.1 -t "Sleep command" "sleep 1"
-PPLOT INFO: Output files will be written to: /user/pplot_out, with basename: 20210921024614
-PPLOT INFO: Running process
-PPLOT INFO: Total run time: 0 hour(s), 00 minute(s), 01.175246 second(s)
-PPLOT INFO: Plotting results
+$ pplot exec -i 0.1 "sleep 1"
+PPLOT INFO: Output files will be written to: /user/pplot_out, with basename: 20210921125420
+PPLOT INFO: Running process as PID: 5379
+PPLOT INFO: Total run time: 0 hour(s), 00 minute(s), 01.034680 second(s)
+PPLOT INFO: Plotting results to: pplot_out/20210921125420.png
 PPLOT SUCCESS!
 ```
 
@@ -41,14 +40,20 @@ Usage: pplot exec [OPTIONS] COMMAND
   Execute a command and profile it.
 
 Options:
-  -i, --interval FLOAT            Interval in seconds
+  -i, --interval FLOAT            Polling interval (seconds)
+  -t, --timeout FLOAT             Timeout process (seconds)
   -c, --command-output [hide|screen|file]
                                   Mode for stdout/stderr of command  [default:
                                   file]
-  -p, --basepath TEXT             Basepath for output files
+  -o, --outfolder DIRECTORY       Folder path for output files
   -n, --basename TEXT             Basename for output files (defaults to
                                   datetime)
-  -t, --title TEXT                Plot title
+  -p, --plot-cols [memory_rss|memory_vms|cpu_percent|cpu_time_user|cpu_time_sys|threads_num]
+                                  Columns to plot (comma-delimited)  [default:
+                                  memory_rss,cpu_percent]
+  --title TEXT                    Plot title (defaults to command)
+  --grid / --no-grid              Add grid to plots  [default: grid]
+  -f, --format [png|pdf|svg]      Plot file format
   -v, --verbose                   Increase verbosity  [x>=0]
   -q, --quiet                     Quiet mode
   --help                          Show this message and exit.

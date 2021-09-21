@@ -12,56 +12,7 @@ import click
 import yaml
 
 from . import __version__
-from .profile import profile_process
-
-PS_FIELD_HELP = (
-    (
-        "PID",
-        "Process IDentifier -- a number used by the operating system"
-        "kernel to uniquely identify a running program or process.",
-    ),
-    (
-        "DATE",
-        "The calender date, given as YEAR-MONTH-DAY, that the process was polled.",
-    ),
-    (
-        "TIME",
-        "The actual time, given as HOUR:MINUTE:SECONDS that the process was polled.",
-    ),
-    (
-        "ELAPSED",
-        "The total time that the process had been running up to the time it was polled.",
-    ),
-    (
-        "CPU",
-        "The CPU utilization of the process: CPU time used divided by the"
-        "time the process has been running (cputime/realtime ratio),"
-        "expressed as a percentage.",
-    ),
-    (
-        "MEM",
-        "The memory utilization of the process: ratio of the process's"
-        "resident set size to the physical memory on the machine, expressed"
-        "as a percentage.",
-    ),
-    (
-        "RSS",
-        "Resident Set Size -- the non-swapped physical memory (RAM) that a"
-        "process is occupying (in kiloBytes). The rest of the process memory"
-        "usage is in swap. If the computer has not used swap, this number"
-        "will be equal to VSIZE.",
-    ),
-    (
-        "VSIZE",
-        "Virtual memory Size -- the total amount of memory the"
-        "process is currently using (in kiloBytes). This includes the amount"
-        "in RAM (the resident set size) as well as the amount in swap.",
-    ),
-    (
-        "CMD",
-        "Running process path and command line arguments.",
-    ),
-)
+from .api import COLUMNS_DESCRIPT, PLOT_YLABELS, plot_result, profile_process
 
 
 def echo_info(string: str, quiet=False) -> None:
@@ -80,7 +31,7 @@ def columns_callback(ctx, param, value: bool) -> None:
     """Plot the ps columns and exit"""
     if not value or ctx.resilient_parsing:
         return
-    click.echo(yaml.dump(dict(PS_FIELD_HELP), default_flow_style=False))
+    click.echo(yaml.dump(dict(COLUMNS_DESCRIPT), default_flow_style=False))
     ctx.exit()
 
 
@@ -92,7 +43,7 @@ def columns_callback(ctx, param, value: bool) -> None:
     is_flag=True,
     expose_value=False,
     callback=columns_callback,
-    help="Show the ps columns and exit",
+    help="Show output column descriptions and exit",
 )
 def main(
     context_settings={  # noqa: B006
@@ -107,7 +58,10 @@ def main(
 
 @main.command("exec")
 @click.argument("command")
-@click.option("-i", "--interval", type=float, default=1, help="Interval in seconds")
+@click.option(
+    "-i", "--interval", type=float, default=1, help="Polling interval (seconds)"
+)
+@click.option("-t", "--timeout", type=float, help="Timeout process (seconds)")
 @click.option(
     "-c",
     "--command-output",
@@ -116,28 +70,67 @@ def main(
     show_default=True,
     help="Mode for stdout/stderr of command",
 )
-@click.option("-p", "--basepath", default="pplot_out", help="Basepath for output files")
+@click.option(
+    "-o",
+    "--outfolder",
+    default="pplot_out",
+    type=click.Path(file_okay=False),
+    help="Folder path for output files",
+)
 @click.option(
     "-n", "--basename", help="Basename for output files (defaults to datetime)"
 )
-@click.option("-t", "--title", help="Plot title")
+@click.option(
+    "-p",
+    "--plot-cols",
+    metavar=f"[{'|'.join(dict(PLOT_YLABELS))}]",
+    default="memory_rss,cpu_percent",
+    show_default=True,
+    help="Columns to plot (comma-delimited)",
+)
+@click.option("--title", help="Plot title (defaults to command)")
+@click.option(
+    "--grid/--no-grid",
+    is_flag=True,
+    default=True,
+    show_default=True,
+    help="Add grid to plots",
+)
+@click.option(
+    "-f",
+    "--format",
+    default="png",
+    type=click.Choice(["png", "pdf", "svg"]),
+    help="Plot file format",
+)
 @click.option("-v", "--verbose", count=True, help="Increase verbosity")
 @click.option("-q", "--quiet", is_flag=True, help="Quiet mode")
 def cmd_exec(
-    command, basepath, basename, interval, command_output, title, verbose, quiet
+    command,
+    outfolder,
+    basename,
+    interval,
+    timeout,
+    command_output,
+    plot_cols,
+    format,
+    title,
+    grid,
+    verbose,
+    quiet,
 ):
     """Execute a command and profile it."""
 
-    basepath = Path(basepath)
+    outfolder = Path(outfolder)
     basename = basename or time.strftime("%Y%m%d%H%M%S", time.localtime())
 
     echo_info(
-        f"Output files will be written to: {basepath.absolute()}, with basename: {basename}",
+        f"Output files will be written to: {outfolder.absolute()}, with basename: {basename}",
         quiet=quiet,
     )
-    # if basepath.exists():
+    # if outfolder.exists():
     #     click.confirm("Overwrite files in existing output folder?", abort=True)
-    basepath.mkdir(parents=True, exist_ok=True)
+    outfolder.mkdir(parents=True, exist_ok=True)
 
     if command_output == "screen":
         stdout_context = nullcontext(sys.stdout)
@@ -146,15 +139,24 @@ def cmd_exec(
         stdout_context = open(os.devnull, "w")
         stderr_context = open(os.devnull, "w")
     elif command_output == "file":
-        stdout_context = open(basepath / f"{basename}.out.log", "w")
-        stderr_context = open(basepath / f"{basename}.err.log", "w")
+        stdout_context = open(outfolder / f"{basename}.out.log", "w")
+        stderr_context = open(outfolder / f"{basename}.err.log", "w")
     else:
         raise ValueError(f"Unknown command output mode: {command_output}")
 
-    output_path = basepath / f"{basename}.csv"
+    output_path = outfolder / f"{basename}.csv"
     output_context = open(output_path, "w")
 
-    echo_info("Running process", quiet=quiet)
+    max_iterations = None
+    if timeout:
+        max_iterations = int(timeout / interval)
+
+    columns = plot_cols.split(",")
+    if not set(columns).issubset(dict(PLOT_YLABELS)):
+        raise click.BadOptionUsage(
+            "plot_cols",
+            f"Invalid value for '-p' / '--plot-cols': Unknown columns in {columns}",
+        )
 
     with stdout_context as stdout_stream:
         with stderr_context as stderr_stream:
@@ -167,16 +169,19 @@ def cmd_exec(
                     stderr=stderr_stream,
                     env=os.environ,
                 )
-                profile_process(
-                    proc.pid,
-                    poll_interval=interval,
-                    quit_if_none=True,
-                    quit_poll_func=proc.poll,
-                    output_stream=output_stream,
-                    headers=True,
-                    output_separator=",",
-                    debug_level=verbose,
-                )
+                echo_info(f"Running process as PID: {proc.pid}", quiet=quiet)
+                try:
+                    profile_process(
+                        proc.pid,
+                        poll_interval=interval,
+                        max_iterations=max_iterations,
+                        output_stream=output_stream,
+                        headers=True,
+                        output_separator=",",
+                    )
+                except TimeoutError:
+                    echo_info("Process reached timeout before terminating", quiet=quiet)
+                proc.kill()
                 end_time = datetime.now()
 
     hours, mins, secs = str(end_time - start_time).split(":")
@@ -184,27 +189,12 @@ def cmd_exec(
         f"Total run time: {hours} hour(s), {mins} minute(s), {secs} second(s)",
         quiet=quiet,
     )
-    echo_info("Plotting results", quiet=quiet)
-    plot_result(output_path, basename, title)
-    echo_success(quiet=quiet)
-
-
-def plot_result(path: Path, basename: str, title: str = "", grid: bool = True):
-    import pandas as pd
-
-    df = pd.read_csv(path).set_index("ELAPSED")
-    df["RSS"] = df["RSS"] / 1024
-    ax1, ax2 = df.plot(
-        y=["RSS", "CPU"], sharex=True, subplots=True, legend=False, grid=grid
+    plot_path = output_path.parent / f"{basename}.{format}"
+    echo_info(f"Plotting results to: {plot_path}", quiet=quiet)
+    plot_result(
+        output_path, plot_path, columns=columns, title=(title or command), grid=grid
     )
-    ax1.set_ylabel("RSS Memory (MB)")
-    ax2.set_ylabel("CPU Usage (%)")
-    ax2.set_xlabel("Elapsed Time (s)")
-    fig = ax1.get_figure()
-    if title:
-        fig.suptitle(title)
-    fig.tight_layout()
-    fig.savefig(path.parent / f"{basename}.png")
+    echo_success(quiet=quiet)
 
 
 if __name__ == "__main__":
