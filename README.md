@@ -1,8 +1,8 @@
 # process-plot
 
 [![Build Status][ci-badge]][ci-link]
+[![codecov.io][cov-badge]][cov-link]
 [![PyPI version][pypi-badge]][pypi-link]
-<!-- [![codecov.io][cov-badge]][cov-link] -->
 
 Create plots of memory and CPU usage for a process.
 
