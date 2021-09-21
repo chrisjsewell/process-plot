@@ -210,7 +210,8 @@ def cmd_exec(
     )
     if not plotted:
         echo_info("No data to plot", quiet=quiet)
-    echo_success(quiet=quiet)
+    else:
+        echo_success(quiet=quiet)
 
 
 if __name__ == "__main__":

@@ -51,7 +51,7 @@ def test_cli_exec(tmp_path):
             "echo hi",
         ],
     )
-    if result.exc_info:
+    if result.exit_code and result.exc_info:
         print(result.output)
         print_exception(*result.exc_info)
     assert result.exit_code == 0

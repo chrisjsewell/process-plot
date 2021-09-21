@@ -24,7 +24,7 @@ COLUMNS_DESCRIPT = (
 )
 
 
-def profile_process(
+def profile_process(  # noqa: C901
     pid: int,
     *,
     poll_interval: Union[int, float] = 1,
@@ -73,17 +73,17 @@ def profile_process(
             data = proc.as_dict(
                 attrs=["cpu_times", "cpu_percent", "num_threads", "memory_info"]
             )
-            if output_files_num:
-                # test if on windows
+        except psutil.NoSuchProcess:
+            break
+        if output_files_num:
+            try:
                 if POSIX:
                     data["num_files"] = proc.num_fds()
                 elif WINDOWS:
                     data["num_files"] = proc.num_handles()
-        except psutil.NoSuchProcess:
-            break
-        except psutil.AccessDenied:
-            # TODO this was happening on linux with num_fds call
-            continue
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                # this was happening on linux with num_fds call
+                data["num_files"] = "-"
 
         if data is None or data["cpu_percent"] is None:
             break
@@ -143,7 +143,7 @@ def plot_result(
         "cpu_time_sys_secs": "cpu_time_sys",
     }
 
-    df = pd.read_csv(inpath).set_index("elapsed_secs")
+    df = pd.read_csv(inpath, na_values="-").set_index("elapsed_secs")
     if not df.shape[0]:
         return False
     df["memory_rss"] = df["memory_rss_bytes"] / (1024 * 1024)
