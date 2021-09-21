@@ -1,5 +1,6 @@
 import os
 from io import StringIO
+from traceback import print_exception
 
 import pytest
 from click.testing import CliRunner
@@ -51,7 +52,8 @@ def test_cli_exec(tmp_path):
         ],
     )
     print(result.output)
-    print(result.stderr)
+    if result.exc_info:
+        print_exception(*result.exc_info)
     assert result.exit_code == 0
     assert os.path.exists(os.path.join(str(tmp_path), "output.csv"))
     assert os.path.exists(os.path.join(str(tmp_path), "output.png"))
