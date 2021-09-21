@@ -24,7 +24,7 @@ COLUMNS_DESCRIPT = (
 )
 
 
-def profile_process(
+def profile_process(  # noqa: C901
     pid: int,
     *,
     poll_interval: Union[int, float] = 1,
@@ -73,14 +73,18 @@ def profile_process(
             data = proc.as_dict(
                 attrs=["cpu_times", "cpu_percent", "num_threads", "memory_info"]
             )
-            if output_files_num:
-                # test if on windows
+        except psutil.NoSuchProcess:
+            break
+        if output_files_num:
+            data["num_files"] = "-"
+            try:
                 if POSIX:
                     data["num_files"] = proc.num_fds()
                 elif WINDOWS:
                     data["num_files"] = proc.num_handles()
-        except psutil.NoSuchProcess:
-            break
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                # this was happening on linux with num_fds call
+                pass
 
         if data is None or data["cpu_percent"] is None:
             break
@@ -126,19 +130,26 @@ def plot_result(
     columns: Sequence[str] = ("memory_rss", "cpu_percent"),
     title: str = "",
     grid: bool = True,
-) -> None:
-    """Plot output stream CSV."""
+    width_cm: Optional[float] = None,
+    height_cm: Optional[float] = None,
+) -> bool:
+    """Plot output stream CSV.
+
+    :returns: True if successful, False if no data to plot
+    """
     import pandas as pd
 
-    convert = {
-        "cpu_time_user": "cpu_time_user_secs",
-        "cpu_time_sys": "cpu_time_sys_secs",
+    _convert = {
+        "cpu_time_user_secs": "cpu_time_user",
+        "cpu_time_sys_secs": "cpu_time_sys",
     }
-    columns = [convert.get(col, col) for col in columns]
 
-    df = pd.read_csv(inpath).set_index("elapsed_secs")
+    df = pd.read_csv(inpath, na_values="-").set_index("elapsed_secs")
+    if not df.shape[0]:
+        return False
     df["memory_rss"] = df["memory_rss_bytes"] / (1024 * 1024)
     df["memory_vms"] = df["memory_vms_bytes"] / (1024 * 1024)
+    df.rename(_convert, axis=1, inplace=True)
     axes = df.plot(y=list(columns), sharex=True, subplots=True, legend=False, grid=grid)
     axes[-1].set_xlabel("Elapsed Time (s)")
     for ax, column in zip(axes, columns):
@@ -146,5 +157,11 @@ def plot_result(
     fig = axes[0].get_figure()
     if title:
         fig.suptitle(title)
+    if width_cm:
+        fig.set_figwidth(width_cm * 0.393701)
+    if height_cm:
+        fig.set_figheight(height_cm * 0.393701)
+    fig.align_ylabels()
     fig.tight_layout()
     fig.savefig(outpath)
+    return True

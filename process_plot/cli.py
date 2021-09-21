@@ -96,6 +96,8 @@ def main(
     show_default=True,
     help="Add grid to plots",
 )
+@click.option("-sw", "--size-width", type=float, help="Width of plot in cm")
+@click.option("-sh", "--size-height", type=float, help="Height of plot in cm")
 @click.option(
     "-f",
     "--format",
@@ -116,6 +118,8 @@ def cmd_exec(
     format,
     title,
     grid,
+    size_width,
+    size_height,
     verbose,
     quiet,
 ):
@@ -195,10 +199,19 @@ def cmd_exec(
     )
     plot_path = output_path.parent / f"{basename}.{format}"
     echo_info(f"Plotting results to: {plot_path}", quiet=quiet)
-    plot_result(
-        output_path, plot_path, columns=columns, title=(title or command), grid=grid
+    plotted = plot_result(
+        output_path,
+        plot_path,
+        columns=columns,
+        title=(title or command),
+        grid=grid,
+        width_cm=size_width,
+        height_cm=size_height,
     )
-    echo_success(quiet=quiet)
+    if not plotted:
+        echo_info("No data to plot", quiet=quiet)
+    else:
+        echo_success(quiet=quiet)
 
 
 if __name__ == "__main__":
