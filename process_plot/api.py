@@ -81,6 +81,9 @@ def profile_process(
                     data["num_files"] = proc.num_handles()
         except psutil.NoSuchProcess:
             break
+        except psutil.AccessDenied:
+            # TODO this was happening on linux with num_fds call
+            continue
 
         if data is None or data["cpu_percent"] is None:
             break

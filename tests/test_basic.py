@@ -51,8 +51,8 @@ def test_cli_exec(tmp_path):
             "echo hi",
         ],
     )
-    print(result.output)
     if result.exc_info:
+        print(result.output)
         print_exception(*result.exc_info)
     assert result.exit_code == 0
     assert os.path.exists(os.path.join(str(tmp_path), "output.csv"))
