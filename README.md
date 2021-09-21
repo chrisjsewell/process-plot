@@ -20,7 +20,7 @@ $ pipx install process-plot
 then run:
 
 ```console
-$ pplot exec -i 0.1 "sleep 1"
+$ pplot exec -i 0.1 -t "Sleep command" "sleep 1"
 PPLOT INFO: Output files will be written to: /user/pplot_out, with basename: 20210921024614
 PPLOT INFO: Running process
 PPLOT INFO: Total run time: 0 hour(s), 00 minute(s), 01.175246 second(s)
@@ -48,6 +48,7 @@ Options:
   -p, --basepath TEXT             Basepath for output files
   -n, --basename TEXT             Basename for output files (defaults to
                                   datetime)
+  -t, --title TEXT                Plot title
   -v, --verbose                   Increase verbosity  [x>=0]
   -q, --quiet                     Quiet mode
   --help                          Show this message and exit.
