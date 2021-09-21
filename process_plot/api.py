@@ -1,9 +1,13 @@
 """Code for profiling a process."""
+import os
 import time
 from os import PathLike
 from typing import Optional, Sequence, TextIO, Union
 
 import psutil
+
+POSIX = os.name == "posix"
+WINDOWS = os.name == "nt"
 
 COLUMNS_DESCRIPT = (
     ("elapsed_secs", "Cumulative time since the process was created."),
@@ -16,6 +20,7 @@ COLUMNS_DESCRIPT = (
     ("threads_num", "Number of threads currently used"),
     ("memory_rss_bytes", "Resident Set Size; the non-swapped physical memory used"),
     ("memory_vms_bytes", "Virtual Memory Size: the virtual memory used"),
+    ("files_num", "Number of file descriptors (POSIX) or handles (Windows) used"),
 )
 
 
@@ -28,7 +33,8 @@ def profile_process(
     flush_output: bool = False,
     headers: bool = True,
     output_separator: str = ",",
-) -> bool:
+    output_files_num: bool = False,
+) -> None:
     """Poll process every `poll_interval` seconds and write system resource usage.
 
     :param process: either a PID or a regex for the process command
@@ -38,10 +44,16 @@ def profile_process(
     :param flush_output: Flush the output stream buffer after every write
     :param headers: Write field headers to output stream
     :param output_separator: Separator for fields
+    :param output_files_num:
+        Output number of file descriptors (unix) or handles (windows) used by process.
+        Note, this is a more expensive operation than others.
 
     """
     col_headers = [name for name, _ in COLUMNS_DESCRIPT]
-    # TODO option for num_fds (unix) or num_handles (windows), but could be slow
+    if output_files_num:
+        assert POSIX or WINDOWS, "output_files_num only supported on posix and windows"
+    else:
+        col_headers.remove("files_num")
 
     if headers and output_stream is not None:
         output_stream.write(output_separator.join(col_headers) + "\n")
@@ -61,6 +73,12 @@ def profile_process(
             data = proc.as_dict(
                 attrs=["cpu_times", "cpu_percent", "num_threads", "memory_info"]
             )
+            if output_files_num:
+                # test if on windows
+                if POSIX:
+                    data["num_files"] = proc.num_fds()
+                elif WINDOWS:
+                    data["num_files"] = proc.num_handles()
         except psutil.NoSuchProcess:
             break
 
@@ -75,6 +93,7 @@ def profile_process(
             "threads_num": data["num_threads"],
             "memory_rss_bytes": data["memory_info"].rss,
             "memory_vms_bytes": data["memory_info"].vms,
+            "files_num": data.get("num_files", None),
         }
 
         if output_stream is not None:
@@ -93,9 +112,10 @@ PLOT_YLABELS = (
     ("memory_rss", "RSS Memory (MB)"),
     ("memory_vms", "VMS Memory (MB)"),
     ("cpu_percent", "CPU Usage (%)"),
-    ("cpu_time_user", "User CPU Time (s)"),
-    ("cpu_time_sys", "System CPU Time (s)"),
-    ("threads_num", "Number of threads"),
+    ("cpu_time_user", "CPU Time, user (s)"),
+    ("cpu_time_sys", "CPU Time, system (s)"),
+    ("threads_num", "# threads"),
+    ("files_num", "# files"),
 )
 
 
@@ -106,7 +126,7 @@ def plot_result(
     columns: Sequence[str] = ("memory_rss", "cpu_percent"),
     title: str = "",
     grid: bool = True,
-):
+) -> None:
     """Plot output stream CSV."""
     import pandas as pd
 

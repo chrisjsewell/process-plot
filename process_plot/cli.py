@@ -158,12 +158,15 @@ def cmd_exec(
             f"Invalid value for '-p' / '--plot-cols': Unknown columns in {columns}",
         )
 
+    command_list = shlex.split(command)
+    echo_info(f"Staring command: {command_list}", quiet=quiet)
+
     with stdout_context as stdout_stream:
         with stderr_context as stderr_stream:
             with output_context as output_stream:
                 start_time = datetime.now()
                 proc = subprocess.Popen(
-                    shlex.split(command),
+                    command_list,
                     shell=False,
                     stdout=stdout_stream,
                     stderr=stderr_stream,
@@ -178,6 +181,7 @@ def cmd_exec(
                         output_stream=output_stream,
                         headers=True,
                         output_separator=",",
+                        output_files_num="files_num" in columns,
                     )
                 except TimeoutError:
                     echo_info("Process reached timeout before terminating", quiet=quiet)
