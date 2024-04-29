@@ -1,4 +1,5 @@
 """Code for profiling a process."""
+
 import os
 import time
 from os import PathLike
