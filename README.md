@@ -8,6 +8,8 @@ Create plots of resource usage for a process (memory, CPU, etc).
 
 Process statistics are polled at a set interval, in a cross-platform manner (i.e. supports Linux, OSX and Windows).
 
+Information is collected on both the main process and any child processes, and can be plotted in a single graph.
+
 ## Usage
 
 Install the package with [pip](https://pip.pypa.io) or [pipx](https://github.com/pypa/pipx):
@@ -31,6 +33,11 @@ You will then find the output files in `/user/pplot_out`, with a plot for the pr
 
 ![example plot](example.png)
 
+If the process spawns child processes, by default, the values for the main process and all child processes are summed together.
+When called with `--stack-processes`, the plot will stack the values per process:
+
+![example parallel plot](example_parallel.png)
+
 Additional options are available:
 
 ```console
@@ -51,6 +58,7 @@ Options:
   -p, --plot-cols [memory_rss|memory_vms|cpu_percent|cpu_time_user|cpu_time_sys|threads_num|files_num]
                                   Columns to plot (comma-delimited)  [default:
                                   memory_rss,cpu_percent]
+ --stack-processes                Stack values per process in plot
   --title TEXT                    Plot title (defaults to command)
   --grid / --no-grid              Add grid to plots  [default: grid]
   -sw, --size-width FLOAT         Width of plot in cm
