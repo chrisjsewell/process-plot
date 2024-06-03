@@ -6,6 +6,7 @@ from os import PathLike
 import time
 from typing import Optional, TextIO, Union
 
+from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 import pandas as pd
 import psutil
@@ -92,7 +93,7 @@ def profile_process(
                 if POSIX:
                     data["num_files"] = proc.num_fds()
                 elif WINDOWS:
-                    data["num_files"] = proc.num_handles()
+                    data["num_files"] = proc.num_handles()  # type: ignore[attr-defined]
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 # this was happening on linux with num_fds call
                 pass
@@ -127,7 +128,7 @@ def profile_process(
         time.sleep(poll_interval)
 
 
-PLOT_YLABELS = (
+PLOT_YLABELS: Sequence[tuple[str, str]] = (
     ("memory_rss", "RSS Memory (MB)"),
     ("memory_vms", "VMS Memory (MB)"),
     ("cpu_percent", "CPU Usage (%)"),
@@ -144,13 +145,14 @@ _convert_column_names = {
 
 
 def plot_result(
-    inpath: PathLike,
-    outpath: PathLike,
+    inpath: PathLike[str],
+    outpath: PathLike[str],
     *,
     columns: Sequence[str] = ("memory_rss", "cpu_percent"),
     stack_processes: bool = False,
     title: str = "",
     grid: bool = True,
+    legend: bool = False,
     width_cm: Optional[float] = None,
     height_cm: Optional[float] = None,
 ) -> bool:
@@ -170,7 +172,10 @@ def plot_result(
     # TODO sort so main process is always on top
     df.rename(_convert_column_names, axis=1, inplace=True)
 
+    axes: list[Axes]
     fig, axes = plt.subplots(nrows=len(columns), sharex=True)
+    if len(columns) == 1:
+        axes = [axes]  # type: ignore[list-item]
 
     for i, column in enumerate(columns):
         data = df.pivot(columns="Process", values=column)
@@ -184,7 +189,7 @@ def plot_result(
 
     axes[-1].set_xlabel("Elapsed Time (s)")
 
-    if stack_processes:
+    if legend:
         lines, labels = axes[0].get_legend_handles_labels()
         fig.legend(
             lines, labels, loc="center left", bbox_to_anchor=(1, 0.5), title="Process"
