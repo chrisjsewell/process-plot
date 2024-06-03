@@ -49,7 +49,9 @@ def test_cli_exec(tmp_path):
             "10",
             "-sh",
             "50",
-            "sleep 1",
+            "-i",
+            "0.1",
+            "sleep 0.3",
         ],
     )
     try:
