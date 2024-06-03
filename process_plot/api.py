@@ -124,6 +124,9 @@ def profile_process(
 
         if output_stream is not None:
             for item in [data, *child_data]:
+                if data["cpu_percent"] is None:
+                    # be resilient to psutil returning None for a child processes data
+                    continue
                 results = {
                     "pid": item["pid"],
                     "type": "main" if item.get("is_main") else "child",
