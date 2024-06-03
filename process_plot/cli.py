@@ -257,6 +257,7 @@ def cmd_exec(
                 try:
                     profile_process(
                         proc.pid,
+                        command_list=command_list,
                         child_processes=child,
                         poll_interval=interval,
                         max_iterations=max_iterations,
@@ -264,6 +265,7 @@ def cmd_exec(
                         headers=True,
                         output_separator=",",
                         output_files_num="files_num" in plot_cols,
+                        title=title,
                     )
                 except TimeoutError:
                     echo_info("Process reached timeout before terminating", quiet=quiet)
