@@ -49,7 +49,7 @@ def test_cli_exec(tmp_path):
             "10",
             "-sh",
             "50",
-            "echo hi",
+            "sleep 1",
         ],
     )
     try:
