@@ -45,8 +45,8 @@ def profile_process(
     output_files_num: bool = False,
     child_processes: bool = True,
     write_metadata: bool = True,
-    command_list: list[str] | None = None,
-    title: str | None = None,
+    command_list: Optional[list[str]] = None,
+    title: Optional[str] = None,
 ) -> None:
     """Poll process every `poll_interval` seconds and write system resource usage.
 
