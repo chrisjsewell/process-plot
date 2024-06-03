@@ -119,10 +119,7 @@ def profile_process(
                 # this was happening on linux with num_fds call
                 pass
 
-        if data is None or data["cpu_percent"] is None:
-            break
-
-        if output_stream is not None:
+        if data["cpu_percent"] is not None and output_stream is not None:
             for item in [data, *child_data]:
                 if data["cpu_percent"] is None:
                     # be resilient to psutil returning None for a child processes data
