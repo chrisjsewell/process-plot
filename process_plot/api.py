@@ -119,24 +119,30 @@ def profile_process(
                 # this was happening on linux with num_fds call
                 pass
 
-        if data is None or data["cpu_percent"] is None:
-            break
-
         if output_stream is not None:
             for item in [data, *child_data]:
-                if data["cpu_percent"] is None:
-                    # be resilient to psutil returning None for a child processes data
-                    continue
                 results = {
                     "pid": item["pid"],
                     "type": "main" if item.get("is_main") else "child",
                     "elapsed_secs": elapsed_time,
-                    "cpu_time_user_secs": item["cpu_times"].user,
-                    "cpu_time_sys_secs": item["cpu_times"].system,
-                    "cpu_percent": item["cpu_percent"],
-                    "threads_num": item["num_threads"],
-                    "memory_rss_bytes": item["memory_info"].rss,
-                    "memory_vms_bytes": item["memory_info"].vms,
+                    "cpu_time_user_secs": "-"
+                    if item["cpu_times"] is None
+                    else item["cpu_times"].user,
+                    "cpu_time_sys_secs": "-"
+                    if item["cpu_times"] is None
+                    else item["cpu_times"].system,
+                    "cpu_percent": "-"
+                    if item["cpu_percent"] is None
+                    else item["cpu_percent"],
+                    "threads_num": "-"
+                    if item["num_threads"] is None
+                    else item["num_threads"],
+                    "memory_rss_bytes": "-"
+                    if item["memory_info"] is None
+                    else item["memory_info"].rss,
+                    "memory_vms_bytes": "-"
+                    if item["memory_info"] is None
+                    else item["memory_info"].vms,
                     "files_num": item.get("num_files", "-"),
                 }
                 output_stream.write(
