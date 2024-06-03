@@ -1,12 +1,13 @@
 """The commandline interface."""
+
+from contextlib import nullcontext
+from datetime import datetime
 import os
+from pathlib import Path
 import shlex
 import subprocess
 import sys
 import time
-from contextlib import nullcontext
-from datetime import datetime
-from pathlib import Path
 
 import click
 import yaml
@@ -51,7 +52,7 @@ def main(
             "-h",
             "--help",
         )
-    }
+    },
 ):
     """CLI to profile a process's memory/CPU usage and plot it."""
 
