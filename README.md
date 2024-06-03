@@ -52,6 +52,7 @@ Options:
   -c, --command-output [hide|screen|file]
                                   Mode for stdout/stderr of command  [default:
                                   file]
+  --no-child                      Don't collect child process data
   -o, --outfolder DIRECTORY       Folder path for output files
   -n, --basename TEXT             Basename for output files (defaults to
                                   datetime)
