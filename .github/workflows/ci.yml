@@ -19,7 +19,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: 3.9
+        python-version: "3.9"
     - uses: pre-commit/action@v3.0.1
 
   tests:
@@ -29,12 +29,12 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: [3.9, 3.10, 3.11, 3.12]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
         include:
         - os: macos-latest
-          python-version: 3.9
+          python-version: "3.9"
         - os: windows-latest
-          python-version: 3.9
+          python-version: "3.9"
 
     steps:
     - uses: actions/checkout@v4
@@ -65,10 +65,10 @@ jobs:
     steps:
     - name: Checkout source
       uses: actions/checkout@v4
-    - name: Set up Python 3.9
+    - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: 3.9
+        python-version: "3.9"
     - name: install flit
       run: |
         pip install flit~=3.4
