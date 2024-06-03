@@ -13,6 +13,12 @@ import sys
 import time
 from typing import Annotated, Optional, Union
 
+try:
+    from typing import TypeAlias
+except ImportError:
+    # added in python 3.10
+    from typing_extensions import TypeAlias
+
 from rich import print as echo
 from rich.table import Table
 import typer
@@ -101,6 +107,57 @@ def parse_plot_columns(columns: Union[str, Sequence[str]]) -> list[str]:
     return cols
 
 
+PlotColsT: TypeAlias = Annotated[
+    Sequence[str],
+    typer.Option(
+        "-p",
+        "--plot-cols",
+        help="Columns to plot",
+        metavar="COMMA-DELIMITED",
+        rich_help_panel="Plot",
+        parser=parse_plot_columns,
+    ),
+]
+StackProcessesT: TypeAlias = Annotated[
+    bool,
+    typer.Option(help="Stack values per process in plot", rich_help_panel="Plot"),
+]
+TitleT: TypeAlias = Annotated[
+    Optional[str],
+    typer.Option(
+        help="Plot title (defaults to command)",
+        show_default=False,
+        rich_help_panel="Plot",
+    ),
+]
+GridT: TypeAlias = Annotated[
+    bool,
+    typer.Option("--grid/--no-grid", help="Add grid to plots", rich_help_panel="Plot"),
+]
+LegendT: TypeAlias = Annotated[
+    bool,
+    typer.Option(
+        "--legend/--no-legend", help="Add legend to figure", rich_help_panel="Plot"
+    ),
+]
+SizeWidthT: TypeAlias = Annotated[
+    Optional[float],
+    typer.Option(
+        "-sw", "--size-width", help="Width of plot in cm", rich_help_panel="Plot"
+    ),
+]
+SizeHeightT: TypeAlias = Annotated[
+    Optional[float],
+    typer.Option(
+        "-sh", "--size-height", help="Height of plot in cm", rich_help_panel="Plot"
+    ),
+]
+FormatT: TypeAlias = Annotated[
+    PlotFormat,
+    typer.Option("-f", "--format", help="Plot file format", rich_help_panel="Plot"),
+]
+
+
 @main.command(name="exec", no_args_is_help=True)
 def cmd_exec(
     command: str,
@@ -138,57 +195,14 @@ def cmd_exec(
             show_default=False,
         ),
     ] = None,
-    plot_cols: Annotated[
-        Sequence[str],
-        typer.Option(
-            "-p",
-            "--plot-cols",
-            help="Columns to plot",
-            metavar="COMMA-DELIMITED",
-            rich_help_panel="Plot",
-            parser=parse_plot_columns,
-        ),
-    ] = ("memory_rss", "cpu_percent"),
-    stack_processes: Annotated[
-        bool,
-        typer.Option(help="Stack values per process in plot", rich_help_panel="Plot"),
-    ] = False,
-    title: Annotated[
-        Optional[str],
-        typer.Option(
-            help="Plot title (defaults to command)",
-            show_default=False,
-            rich_help_panel="Plot",
-        ),
-    ] = None,
-    grid: Annotated[
-        bool,
-        typer.Option(
-            "--grid/--no-grid", help="Add grid to plots", rich_help_panel="Plot"
-        ),
-    ] = True,
-    legend: Annotated[
-        bool,
-        typer.Option(
-            "--legend/--no-legend", help="Add legend to figure", rich_help_panel="Plot"
-        ),
-    ] = False,
-    size_width: Annotated[
-        Optional[float],
-        typer.Option(
-            "-sw", "--size-width", help="Width of plot in cm", rich_help_panel="Plot"
-        ),
-    ] = None,
-    size_height: Annotated[
-        Optional[float],
-        typer.Option(
-            "-sh", "--size-height", help="Height of plot in cm", rich_help_panel="Plot"
-        ),
-    ] = None,
-    format: Annotated[
-        PlotFormat,
-        typer.Option("-f", "--format", help="Plot file format", rich_help_panel="Plot"),
-    ] = PlotFormat.png,
+    plot_cols: PlotColsT = ("memory_rss", "cpu_percent"),
+    stack_processes: StackProcessesT = False,
+    title: TitleT = None,
+    grid: GridT = True,
+    legend: LegendT = False,
+    size_width: SizeWidthT = None,
+    size_height: SizeHeightT = None,
+    format: FormatT = PlotFormat.png,
     quiet: Annotated[bool, typer.Option("-q", "--quiet", help="Quiet mode")] = False,
 ) -> None:
     """Execute a command and profile it."""
@@ -271,6 +285,51 @@ def cmd_exec(
         plot_path,
         columns=plot_cols,
         title=(title or command),
+        grid=grid,
+        legend=legend,
+        stack_processes=stack_processes,
+        width_cm=size_width,
+        height_cm=size_height,
+    )
+    if not plotted:
+        echo_info("No data to plot", quiet=quiet)
+    else:
+        echo_success(quiet=quiet)
+
+
+@main.command(name="plot", no_args_is_help=True)
+def cmd_plot(
+    path: Annotated[
+        Path,
+        typer.Argument(
+            help="Path to the CSV file containing the process data",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+        ),
+    ],
+    plot_cols: PlotColsT = ("memory_rss", "cpu_percent"),
+    stack_processes: StackProcessesT = False,
+    title: TitleT = None,
+    grid: GridT = True,
+    legend: LegendT = False,
+    size_width: SizeWidthT = None,
+    size_height: SizeHeightT = None,
+    format: FormatT = PlotFormat.png,
+    quiet: Annotated[bool, typer.Option("-q", "--quiet", help="Quiet mode")] = False,
+) -> None:
+    """Plot a previously profiled process."""
+    # plot_path = output_path.parent / f"{basename}.{format.value}"
+    plot_path = path.with_suffix(f".{format.value}")
+    echo_info(
+        f"Plotting results to: [underline cyan]{plot_path}[/underline cyan]",
+        quiet=quiet,
+    )
+    plotted = plot_result(
+        path,
+        plot_path,
+        columns=plot_cols,
+        title=title or "",
         grid=grid,
         legend=legend,
         stack_processes=stack_processes,
