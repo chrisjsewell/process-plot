@@ -1,8 +1,10 @@
 """Code for profiling a process."""
+
+from collections.abc import Sequence
 import os
-import time
 from os import PathLike
-from typing import Optional, Sequence, TextIO, Union
+import time
+from typing import Optional, TextIO, Union
 
 import psutil
 
@@ -24,7 +26,7 @@ COLUMNS_DESCRIPT = (
 )
 
 
-def profile_process(  # noqa: C901
+def profile_process(
     pid: int,
     *,
     poll_interval: Union[int, float] = 1,
@@ -63,7 +65,6 @@ def profile_process(  # noqa: C901
     iteration = 0
     proc = psutil.Process(pid)
     while True:
-
         iteration += 1
 
         elapsed_time = time.time() - proc.create_time()

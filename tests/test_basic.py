@@ -1,9 +1,9 @@
-import os
 from io import StringIO
+import os
 from traceback import print_exception
 
-import pytest
 from click.testing import CliRunner
+import pytest
 
 from process_plot.api import COLUMNS_DESCRIPT, PLOT_YLABELS, profile_process
 from process_plot.cli import cmd_exec
