@@ -71,6 +71,7 @@ def main(
     show_default=True,
     help="Mode for stdout/stderr of command",
 )
+@click.option("--no-child", is_flag=True, help="Don't collect child process data")
 @click.option(
     "-o",
     "--outfolder",
@@ -88,6 +89,9 @@ def main(
     default="memory_rss,cpu_percent",
     show_default=True,
     help="Columns to plot (comma-delimited)",
+)
+@click.option(
+    "--stack-processes", is_flag=True, help="Stack values per process in plot"
 )
 @click.option("--title", help="Plot title (defaults to command)")
 @click.option(
@@ -110,12 +114,14 @@ def main(
 @click.option("-q", "--quiet", is_flag=True, help="Quiet mode")
 def cmd_exec(
     command,
+    no_child,
     outfolder,
     basename,
     interval,
     timeout,
     command_output,
     plot_cols,
+    stack_processes,
     format,
     title,
     grid,
@@ -181,6 +187,7 @@ def cmd_exec(
                 try:
                     profile_process(
                         proc.pid,
+                        child_processes=not no_child,
                         poll_interval=interval,
                         max_iterations=max_iterations,
                         output_stream=output_stream,
@@ -206,6 +213,7 @@ def cmd_exec(
         columns=columns,
         title=(title or command),
         grid=grid,
+        stack_processes=stack_processes,
         width_cm=size_width,
         height_cm=size_height,
     )
