@@ -1,8 +1,10 @@
 """Code for profiling a process."""
 
 from collections.abc import Sequence
+import json
 import os
 from os import PathLike
+from textwrap import indent
 import time
 from typing import Optional, TextIO, Union
 
@@ -42,6 +44,9 @@ def profile_process(
     output_separator: str = ",",
     output_files_num: bool = False,
     child_processes: bool = True,
+    write_metadata: bool = True,
+    command_list: Optional[list[str]] = None,
+    title: Optional[str] = None,
 ) -> None:
     """Poll process every `poll_interval` seconds and write system resource usage.
 
@@ -62,6 +67,22 @@ def profile_process(
         assert POSIX or WINDOWS, "output_files_num only supported on posix and windows"
     else:
         col_headers.remove("files_num")
+
+    if write_metadata and output_stream is not None:
+        from process_plot import __version__
+
+        metadata = {
+            "version": __version__,
+            "title": title,
+            "command": command_list,
+            "pid": pid,
+            "poll_interval": poll_interval,
+            "max_iterations": max_iterations,
+            "child_processes": child_processes,
+        }
+        output_stream.write(
+            indent(json.dumps(metadata, indent=2), "# ", lambda s: True) + "\n"
+        )
 
     if headers and output_stream is not None:
         output_stream.write(output_separator.join(col_headers) + "\n")
@@ -160,7 +181,7 @@ def plot_result(
 
     :returns: True if successful, False if no data to plot
     """
-    df = pd.read_csv(inpath, na_values="-").set_index("elapsed_secs")
+    df = pd.read_csv(inpath, na_values="-", comment="#").set_index("elapsed_secs")
     if not df.shape[0]:
         return False
 
