@@ -1,135 +1,196 @@
 """The commandline interface."""
 
+from collections.abc import Sequence
 from contextlib import nullcontext
 from datetime import datetime
+from enum import Enum
+from io import TextIOWrapper
 import os
 from pathlib import Path
 import shlex
 import subprocess
 import sys
 import time
+from typing import Annotated, Optional, Union
 
-import click
-import yaml
+from rich import print as echo
+from rich.table import Table
+import typer
 
 from . import __version__
 from .api import COLUMNS_DESCRIPT, PLOT_YLABELS, plot_result, profile_process
 
+main = typer.Typer(
+    no_args_is_help=True,
+    context_settings={"help_option_names": ["-h", "--help"]},
+    rich_markup_mode="rich",
+)
 
-def echo_info(string: str, quiet=False) -> None:
+
+def version_callback(value: bool) -> None:
+    """Print the version and exit."""
+    if value:
+        echo(f"version: {__version__}")
+        raise typer.Exit()
+
+
+def columns_callback(value: bool) -> None:
+    """Print the available columns and exit"""
+    if value:
+        table = Table(show_header=True)
+        table.add_column("Name")
+        table.add_column("Description")
+        for name, desc in COLUMNS_DESCRIPT:
+            table.add_row(name, desc)
+        echo(table)
+        raise typer.Exit()
+
+
+@main.callback()
+def main_app(
+    version: Optional[bool] = typer.Option(
+        None,
+        "--version",
+        callback=version_callback,
+        is_eager=True,
+        help="Show the application version and exit.",
+    ),
+    columns: Optional[bool] = typer.Option(
+        None,
+        "--columns",
+        callback=columns_callback,
+        is_eager=True,
+        help="Show the available columns and exit.",
+    ),
+) -> None:
+    """[underline]CLI to profile a process's memory/CPU usage and plot it[/underline]"""
+
+
+def echo_info(string: str, quiet: bool = False) -> None:
     """Echo info to the user."""
     if not quiet:
-        click.echo(click.style("PPLOT INFO: ", fg="blue") + string)
+        echo("[blue]PPLOT INFO: [/blue]" + string)
 
 
-def echo_success(quiet=False):
+def echo_success(quiet: bool = False) -> None:
     """Echo success to the user."""
     if not quiet:
-        click.echo(click.style("PPLOT SUCCESS!", fg="green"))
+        echo("[bold green]PPLOT SUCCESS![/bold green]")
 
 
-def columns_callback(ctx, param, value: bool) -> None:
-    """Plot the ps columns and exit"""
-    if not value or ctx.resilient_parsing:
-        return
-    click.echo(yaml.dump(dict(COLUMNS_DESCRIPT), default_flow_style=False))
-    ctx.exit()
+class CmdOutput(str, Enum):
+    hide = "hide"
+    screen = "screen"
+    file = "file"
 
 
-@click.group()
-@click.version_option(__version__)
-@click.option(
-    "--columns",
-    is_eager=True,
-    is_flag=True,
-    expose_value=False,
-    callback=columns_callback,
-    help="Show output column descriptions and exit",
-)
-def main(
-    context_settings={  # noqa: B006
-        "help_option_names": (
-            "-h",
-            "--help",
-        )
-    },
-):
-    """CLI to profile a process's memory/CPU usage and plot it."""
+class PlotFormat(str, Enum):
+    png = "png"
+    pdf = "pdf"
+    svg = "svg"
 
 
-@main.command("exec")
-@click.argument("command")
-@click.option(
-    "-i", "--interval", type=float, default=1, help="Polling interval (seconds)"
-)
-@click.option("-t", "--timeout", type=float, help="Timeout process (seconds)")
-@click.option(
-    "-c",
-    "--command-output",
-    default="file",
-    type=click.Choice(["hide", "screen", "file"]),
-    show_default=True,
-    help="Mode for stdout/stderr of command",
-)
-@click.option("--no-child", is_flag=True, help="Don't collect child process data")
-@click.option(
-    "-o",
-    "--outfolder",
-    default="pplot_out",
-    type=click.Path(file_okay=False),
-    help="Folder path for output files",
-)
-@click.option(
-    "-n", "--basename", help="Basename for output files (defaults to datetime)"
-)
-@click.option(
-    "-p",
-    "--plot-cols",
-    metavar=f"[{'|'.join(dict(PLOT_YLABELS))}]",
-    default="memory_rss,cpu_percent",
-    show_default=True,
-    help="Columns to plot (comma-delimited)",
-)
-@click.option(
-    "--stack-processes", is_flag=True, help="Stack values per process in plot"
-)
-@click.option("--title", help="Plot title (defaults to command)")
-@click.option(
-    "--grid/--no-grid",
-    is_flag=True,
-    default=True,
-    show_default=True,
-    help="Add grid to plots",
-)
-@click.option("-sw", "--size-width", type=float, help="Width of plot in cm")
-@click.option("-sh", "--size-height", type=float, help="Height of plot in cm")
-@click.option(
-    "-f",
-    "--format",
-    default="png",
-    type=click.Choice(["png", "pdf", "svg"]),
-    help="Plot file format",
-)
-@click.option("-v", "--verbose", count=True, help="Increase verbosity")
-@click.option("-q", "--quiet", is_flag=True, help="Quiet mode")
+def parse_plot_columns(columns: Union[str, Sequence[str]]) -> list[str]:
+    """Process the plot columns."""
+    if isinstance(columns, str):
+        cols = [c.strip() for c in columns.split(",")]
+    else:
+        cols = list(columns)
+    if not set(cols).issubset({name for name, _ in PLOT_YLABELS}):
+        raise typer.BadParameter(f"Unknown columns in {cols}")
+    return cols
+
+
+@main.command(name="exec", no_args_is_help=True)
 def cmd_exec(
-    command,
-    no_child,
-    outfolder,
-    basename,
-    interval,
-    timeout,
-    command_output,
-    plot_cols,
-    stack_processes,
-    format,
-    title,
-    grid,
-    size_width,
-    size_height,
-    verbose,
-    quiet,
-):
+    command: str,
+    interval: Annotated[
+        float, typer.Option("-i", "--interval", help="Polling interval (seconds)")
+    ] = 1,
+    timeout: Annotated[
+        Optional[float],
+        typer.Option(
+            "-t", "--timeout", help="Timeout process (seconds)", show_default=False
+        ),
+    ] = None,
+    child: Annotated[bool, typer.Option(help="Collect child process data")] = True,
+    command_output: Annotated[
+        CmdOutput,
+        typer.Option(
+            "-c",
+            "--command-output",
+            help="Mode for stdout/stderr of command",
+            show_default=True,
+        ),
+    ] = CmdOutput.file,
+    outfolder: Annotated[
+        Path,
+        typer.Option(
+            "-o", "--outfolder", file_okay=False, help="Folder path for output files"
+        ),
+    ] = Path("pplot_out"),
+    basename: Annotated[
+        Optional[str],
+        typer.Option(
+            "-n",
+            "--basename",
+            help="Basename for output files (defaults to datetime)",
+            show_default=False,
+        ),
+    ] = None,
+    plot_cols: Annotated[
+        Sequence[str],
+        typer.Option(
+            "-p",
+            "--plot-cols",
+            help="Columns to plot",
+            metavar="COMMA-DELIMITED",
+            rich_help_panel="Plot",
+            parser=parse_plot_columns,
+        ),
+    ] = ("memory_rss", "cpu_percent"),
+    stack_processes: Annotated[
+        bool,
+        typer.Option(help="Stack values per process in plot", rich_help_panel="Plot"),
+    ] = False,
+    title: Annotated[
+        Optional[str],
+        typer.Option(
+            help="Plot title (defaults to command)",
+            show_default=False,
+            rich_help_panel="Plot",
+        ),
+    ] = None,
+    grid: Annotated[
+        bool,
+        typer.Option(
+            "--grid/--no-grid", help="Add grid to plots", rich_help_panel="Plot"
+        ),
+    ] = True,
+    legend: Annotated[
+        bool,
+        typer.Option(
+            "--legend/--no-legend", help="Add legend to figure", rich_help_panel="Plot"
+        ),
+    ] = False,
+    size_width: Annotated[
+        Optional[float],
+        typer.Option(
+            "-sw", "--size-width", help="Width of plot in cm", rich_help_panel="Plot"
+        ),
+    ] = None,
+    size_height: Annotated[
+        Optional[float],
+        typer.Option(
+            "-sh", "--size-height", help="Height of plot in cm", rich_help_panel="Plot"
+        ),
+    ] = None,
+    format: Annotated[
+        PlotFormat,
+        typer.Option("-f", "--format", help="Plot file format", rich_help_panel="Plot"),
+    ] = PlotFormat.png,
+    quiet: Annotated[bool, typer.Option("-q", "--quiet", help="Quiet mode")] = False,
+) -> None:
     """Execute a command and profile it."""
 
     outfolder = Path(outfolder)
@@ -143,13 +204,15 @@ def cmd_exec(
     #     click.confirm("Overwrite files in existing output folder?", abort=True)
     outfolder.mkdir(parents=True, exist_ok=True)
 
-    if command_output == "screen":
-        stdout_context = nullcontext(sys.stdout)
-        stderr_context = nullcontext(sys.stderr)
-    elif command_output == "hide":
+    stdout_context: TextIOWrapper
+    stderr_context: TextIOWrapper
+    if command_output == CmdOutput.screen:
+        stdout_context = nullcontext(sys.stdout)  # type: ignore[assignment]
+        stderr_context = nullcontext(sys.stderr)  # type: ignore[assignment]
+    elif command_output == CmdOutput.hide:
         stdout_context = open(os.devnull, "w")
         stderr_context = open(os.devnull, "w")
-    elif command_output == "file":
+    elif command_output == CmdOutput.file:
         stdout_context = open(outfolder / f"{basename}.out.log", "w")
         stderr_context = open(outfolder / f"{basename}.err.log", "w")
     else:
@@ -161,13 +224,6 @@ def cmd_exec(
     max_iterations = None
     if timeout:
         max_iterations = int(timeout / interval)
-
-    columns = plot_cols.split(",")
-    if not set(columns).issubset(dict(PLOT_YLABELS)):
-        raise click.BadOptionUsage(
-            "plot_cols",
-            f"Invalid value for '-p' / '--plot-cols': Unknown columns in {columns}",
-        )
 
     command_list = shlex.split(command)
     echo_info(f"Staring command: {command_list}", quiet=quiet)
@@ -187,13 +243,13 @@ def cmd_exec(
                 try:
                     profile_process(
                         proc.pid,
-                        child_processes=not no_child,
+                        child_processes=child,
                         poll_interval=interval,
                         max_iterations=max_iterations,
                         output_stream=output_stream,
                         headers=True,
                         output_separator=",",
-                        output_files_num="files_num" in columns,
+                        output_files_num="files_num" in plot_cols,
                     )
                 except TimeoutError:
                     echo_info("Process reached timeout before terminating", quiet=quiet)
@@ -205,14 +261,18 @@ def cmd_exec(
         f"Total run time: {hours} hour(s), {mins} minute(s), {secs} second(s)",
         quiet=quiet,
     )
-    plot_path = output_path.parent / f"{basename}.{format}"
-    echo_info(f"Plotting results to: {plot_path}", quiet=quiet)
+    plot_path = output_path.parent / f"{basename}.{format.value}"
+    echo_info(
+        f"Plotting results to: [underline cyan]{plot_path}[/underline cyan]",
+        quiet=quiet,
+    )
     plotted = plot_result(
         output_path,
         plot_path,
-        columns=columns,
+        columns=plot_cols,
         title=(title or command),
         grid=grid,
+        legend=legend,
         stack_processes=stack_processes,
         width_cm=size_width,
         height_cm=size_height,

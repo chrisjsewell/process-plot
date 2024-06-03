@@ -1,6 +1,5 @@
 # process-plot
 
-[![Build Status][ci-badge]][ci-link]
 [![codecov.io][cov-badge]][cov-link]
 [![PyPI version][pypi-badge]][pypi-link]
 
@@ -21,7 +20,7 @@ $ pipx install process-plot
 then run:
 
 ```console
-$ pplot exec -i 0.1 "sleep 1"
+$ pplot exec "sleep 1" -i 0.1
 PPLOT INFO: Output files will be written to: /user/pplot_out, with basename: 20210921125420
 PPLOT INFO: Running process as PID: 5379
 PPLOT INFO: Total run time: 0 hour(s), 00 minute(s), 01.034680 second(s)
@@ -36,38 +35,47 @@ You will then find the output files in `/user/pplot_out`, with a plot for the pr
 If the process spawns child processes, by default, the values for the main process and all child processes are summed together.
 When called with `--stack-processes`, the plot will stack the values per process:
 
+```console
+$ pplot exec "parallel sleep ::: 2 2 2" -i 0.2 --stack-processes --legend
+```
+
 ![example parallel plot](example_parallel.png)
 
 Additional options are available:
 
 ```console
 $ pplot exec --help
-Usage: pplot exec [OPTIONS] COMMAND
 
-  Execute a command and profile it.
+ Usage: pplot exec [OPTIONS] COMMAND
 
-Options:
-  -i, --interval FLOAT            Polling interval (seconds)
-  -t, --timeout FLOAT             Timeout process (seconds)
-  -c, --command-output [hide|screen|file]
-                                  Mode for stdout/stderr of command  [default:
-                                  file]
-  --no-child                      Don't collect child process data
-  -o, --outfolder DIRECTORY       Folder path for output files
-  -n, --basename TEXT             Basename for output files (defaults to
-                                  datetime)
-  -p, --plot-cols [memory_rss|memory_vms|cpu_percent|cpu_time_user|cpu_time_sys|threads_num|files_num]
-                                  Columns to plot (comma-delimited)  [default:
-                                  memory_rss,cpu_percent]
- --stack-processes                Stack values per process in plot
-  --title TEXT                    Plot title (defaults to command)
-  --grid / --no-grid              Add grid to plots  [default: grid]
-  -sw, --size-width FLOAT         Width of plot in cm
-  -sh, --size-height FLOAT        Height of plot in cm
-  -f, --format [png|pdf|svg]      Plot file format
-  -v, --verbose                   Increase verbosity  [x>=0]
-  -q, --quiet                     Quiet mode
-  --help                          Show this message and exit.
+ Execute a command and profile it.
+
+╭─ Arguments ───────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ *    command      TEXT  [default: None] [required]                                                            │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --interval        -i                FLOAT               Polling interval (seconds) [default: 1]               │
+│ --timeout         -t                FLOAT               Timeout process (seconds)                             │
+│ --child               --no-child                        Collect child process data [default: child]           │
+│ --command-output  -c                [hide|screen|file]  Mode for stdout/stderr of command [default: file]     │
+│ --outfolder       -o                DIRECTORY           Folder path for output files [default: pplot_out]     │
+│ --basename        -n                TEXT                Basename for output files (defaults to datetime)      │
+│ --quiet           -q                                    Quiet mode                                            │
+│ --help            -h                                    Show this message and exit.                           │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Plot ────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --plot-cols        -p                           COMMA-DELIMITED  Columns to plot                              │
+│                                                                  [default: memory_rss, cpu_percent]           │
+│ --stack-processes       --no-stack-processes                     Stack values per process in plot             │
+│                                                                  [default: no-stack-processes]                │
+│ --title                                         TEXT             Plot title (defaults to command)             │
+│ --grid                  --no-grid                                Add grid to plots [default: grid]            │
+│ --legend                --no-legend                              Add legend to figure [default: no-legend]    │
+│ --size-width       -sw                          FLOAT            Width of plot in cm [default: None]          │
+│ --size-height      -sh                          FLOAT            Height of plot in cm [default: None]         │
+│ --format           -f                           [png|pdf|svg]    Plot file format [default: png]              │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
 ```
 
 ## Acknowledgements
