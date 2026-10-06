@@ -6,7 +6,7 @@ import os
 from os import PathLike
 from textwrap import indent
 import time
-from typing import Optional, TextIO, Union
+from typing import Optional, TextIO
 
 from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
@@ -36,7 +36,7 @@ COLUMNS_DESCRIPT = (
 def profile_process(
     pid: int,
     *,
-    poll_interval: Union[int, float] = 1,
+    poll_interval: float = 1,
     max_iterations: Optional[int] = None,
     output_stream: Optional[TextIO] = None,
     flush_output: bool = False,
